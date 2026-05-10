@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Viagens - Xerém</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --primary-light: #4caf50;
+            --dark: #1b5e20;
+            --bg: #f1f8e9;
+            --card: #ffffff;
+            --text: #333333;
+            --pdf-btn: #d32f2f;
+            --edit-btn: #f57c00;
+            --delete-btn: #d32f2f;
+            --clear-btn: #c62828;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: var(--card);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        /* Indicador de carregamento em nuvem */
+        #loadingOverlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.85);
+            border-radius: 12px;
+            z-index: 10;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        h1, h2 { text-align: center; color: var(--dark); }
+        h2 { font-size: 18px; border-bottom: 2px solid var(--bg); padding-bottom: 8px; color: var(--primary); margin-top: 25px; }
+
+        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+        label { font-weight: 600; margin-bottom: 5px; font-size: 14px; }
+
+        select, input, button { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; outline: none; }
+        
+        .checkbox-group { display: flex; gap: 15px; margin-top: 5px; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #eee; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+
+        button { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:hover { background-color: var(--dark); }
+
+        .btn-pdf { background-color: var(--pdf-btn); width: 100%; margin-bottom: 10px; }
+
+        .btn-clear {
+            background-color: #fff;
+            color: var(--clear-btn);
+            border: 1px solid var(--clear-btn);
+            width: 100%;
+            margin-bottom: 20px;
+            font-size: 14px;
+            padding: 8px;
+            transition: all 0.2s;
+        }
+        .btn-clear:hover {
+            background-color: var(--clear-btn);
+            color: white;
+        }
+
+        .summary-box {
+            background: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-value { font-size: 20px; font-weight: bold; color: var(--dark); }
+
+        .travel-card {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-left: 5px solid var(--primary-light);
+        }
+
+        .badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; color: white; font-weight: bold; }
+        .badge-ida { background: #0288d1; }
+        .badge-volta { background: #f57c00; }
+
+        #customNotesGroup { display: none; margin-top: 10px; }
+
+        /* Estilos aplicados no papel PDF gerado */
+        .pdf-page-container {
+            font-family: Arial, sans-serif;
+            padding: 10px;
+            color: #333;
+        }
+        .pdf-header {
+            text-align: center;
+            border-bottom: 3px solid #2e7d32;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .pdf-card {
+            background: #ffffff;
+            border: 1px solid #ddd;
+            border-left: 5px solid #4caf50;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            page-break-inside: avoid;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="loadingOverlay">
+            <div class="spinner"></div>
+            <span id="loadingText">Sincronizando com a Nuvem...</span>
+        </div>
+
+        <h1>📍 Destino: Xerém</h1>
+        
+        <form id="travelForm">
+            <h2 id="formTitle">Registrar Viagem</h2>
+            <div class="form-group">
+                <label>Passageiro(a):</label>
+                <select id="passenger">
+                    <option value="Berg">Berg</option>
+                    <option value="Gabriel">Gabriel</option>
+                    <option value="Rafael">Rafael</option>
+                    <option value="Juliana">Juliana</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="dirGroup">
+                <label>Tipo:</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-label"><input type="checkbox" id="cIda" checked> Ida</label>
+                    <label class="checkbox-label"><input type="checkbox" id="cVolta"> Volta</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Data:</label>
+                <input type="date" id="date">
+            </div>
+
+            <div class="form-group">
+                <label>Notas / Meio de Transporte:</label>
+                <select id="notesSelect" onchange="toggleCustomNotes()">
+                    <option value="Carro do Berg">Carro do Berg</option>
+                    <option value="Uber">Uber</option>
+                    <option value="Outro">Outro...</option>
+                </select>
+                <div id="customNotesGroup">
+                    <input type="text" id="customNotes" placeholder="Digite a observação personalizada">
+                </div>
+            </div>
+
+            <button type="submit" id="btnSubmit">Salvar na Nuvem</button>
+        </form>
+
+        <br><hr><br>
+
+        <h2>Relatório Financeiro (Nuvem)</h2>
+        
+        <div class="form-group">
+            <label>Filtrar por Nome:</label>
+            <select id="filter" onchange="render()">
+                <option value="Todos">Todos os Passageiros</option>
+                <option value="Berg">Berg</option>
+                <option value="Gabriel">Gabriel</option>
+                <option value="Rafael">Rafael</option>
+                <option value="Juliana">Juliana</option>
+            </select>
+        </div>
+
+        <button class="btn-pdf" onclick="downloadPDF()">📄 Baixar PDF do Relatório</button>
+        <button class="btn-clear" onclick="clearAllData()">⚠️ Limpar Todo o Histórico</button>
+
+        <div class="summary-box">
+            <div>
+                <p>Qtd: <span id="resCount">0</span></p>
+                <small>R$ 12,50 cada</small>
+            </div>
+            <div class="summary-value" id="resTotal">R$ 0,00</div>
+        </div>
+
+        <div id="list"></div>
+    </div>
+
+    <script>
+        // URL da sua API Google Apps Script fornecida
+        const API_URL = "https://script.google.com/macros/s/AKfycbz2-8xldXs-VKsMiCIqwZyKR9K3Kl26VOCMHOiD47O9uQugqQZ1UK1zRBffD1vXnKMF/exec";
+        const PRECO = 12.50;
+        
+        let trips = []; // Agora carregado direto da planilha Google
+
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+        function showLoading(text) {
+            document.getElementById('loadingText').innerText = text;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function toggleCustomNotes() {
+            const selectValue = document.getElementById('notesSelect').value;
+            const customGroup = document.getElementById('customNotesGroup');
+            if (selectValue === 'Outro') {
+                customGroup.style.display = 'block';
+                document.getElementById('customNotes').required = true;
+            } else {
+                customGroup.style.display = 'none';
+                document.getElementById('customNotes').required = false;
+            }
+        }
+
+        function getSelectedNotes() {
+            const selectValue = document.getElementById('notesSelect').value;
+            if (selectValue === 'Outro') {
+                return document.getElementById('customNotes').value || "Sem detalhes";
+            }
+            return selectValue;
+        }
+
+        // Carrega as viagens da Planilha Google (doGet)
+        async function fetchTripsFromCloud() {
+            showLoading("Buscando dados na nuvem...");
+            try {
+                const response = await fetch(API_URL);
+                const rawData = await response.json();
+                
+                // Mapeia o formato da Planilha Google [Data, Nome, Tipo, Notas, Valor]
+                // para o objeto do nosso aplicativo de forma retrocompatível.
+                trips = rawData.map((row, index) => ({
+                    id: index + 1,
+                    date: row[0],
+                    passenger: row[1],
+                    type: row[2],
+                    notes: row[3]
+                }));
+                
+                render();
+            } catch (error) {
+                console.error("Erro ao buscar dados:", error);
+                alert("Erro ao conectar com a Planilha Google. Verifique a internet.");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Salva na planilha Google (doPost)
+        async function saveTripToCloud(tripData) {
+            showLoading("Enviando viagem para a nuvem...");
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Necessário para evitar bloqueio de CORS do Google Apps Script
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(tripData)
+                });
+                
+                // Como 'no-cors' não nos dá a resposta diretamente, forçamos um delay pequeno
+                // e recarregamos os dados da planilha para atualizar a tela.
+                setTimeout(async () => {
+                    await fetchTripsFromCloud();
+                }, 1500);
+
+            } catch (error) {
+                console.error("Erro ao salvar:", error);
+                alert("Ocorreu um problema ao registrar. Tente novamente.");
+                hideLoading();
+            }
+        }
+
+        document.getElementById('travelForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const pass = document.getElementById('passenger').value;
+            const dt = document.getElementById('date').value.split('-').reverse().join('/');
+            const nt = getSelectedNotes();
+
+            const cIda = document.getElementById('cIda').checked;
+            const cVolta = document.getElementById('cVolta').checked;
+
+            if (!cIda && !cVolta) {
+                alert("Selecione pelo menos Ida, Volta ou Ambas.");
+                return;
+            }
+
+            if (cIda) {
+                await saveTripToCloud({
+                    date: dt,
+                    passenger: pass,
+                    type: 'Ida',
+                    notes: nt
+                });
+            }
+
+            if (cVolta) {
+                // Pequeno delay para o ID/Data da linha não colidir no Google Sheets
+                setTimeout(async () => {
+                    await saveTripToCloud({
+                        date: dt,
+                        passenger: pass,
+                        type: 'Volta',
+                        notes: nt
+                    });
+                }, 1000);
+            }
+            
+            resetForm();
+        };
+
+        function resetForm() {
+            document.getElementById('notesSelect').value = "Carro do Berg";
+            document.getElementById('customNotes').value = "";
+            document.getElementById('customNotesGroup').style.display = "none";
+            document.getElementById('travelForm').reset();
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        }
+
+        // Função de limpar tudo via Nuvem
+        async function clearAllData() {
+            const confirmacao1 = confirm("⚠️ ATENÇÃO: Deseja realmente APAGAR todas as viagens registradas na Planilha Google?");
+            if (!confirmacao1) return;
+
+            const confirmacao2 = confirm("Tem certeza absoluta? Isso limpará a sua planilha inteira!");
+            if (!confirmacao2) return;
+
+            showLoading("Limpando histórico na nuvem...");
+            try {
+                // Envia comando especial de limpeza para a API
+                await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: "CLEAR_ALL" })
+                });
+
+                setTimeout(async () => {
+                    await fetchTripsFromCloud();
+                }, 1500);
+                
+            } catch (error) {
+                alert("Erro ao tentar limpar o histórico na nuvem.");
+                hideLoading();
+            }
+        }
+
+        function render() {
+            const f = document.getElementById('filter').value;
+            const filtered = f === "Todos" ? trips : trips.filter(t => t.passenger === f);
+            
+            document.getElementById('resCount').innerText = filtered.length;
+            document.getElementById('resTotal').innerText = (filtered.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+
+            const list = document.getElementById('list');
+            list.innerHTML = filtered.length ? "" : "<p style='text-align:center; color:#999'>Nenhum registro encontrado na planilha.</p>";
+
+            // Exibe a lista (as mais recentes no topo)
+            [...filtered].reverse().forEach(t => {
+                list.innerHTML += `
+                    <div class="travel-card">
+                        <p><strong>${t.passenger}</strong> <span class="badge ${t.type==='Ida'?'badge-ida':'badge-volta'}">${t.type}</span></p>
+                        <p>📅 ${t.date} | 🚘 ${t.notes}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function downloadPDF() {
+            const f = document.getElementById('filter').value;
+            const filtered = f === "Todos" ? trips : trips.filter(t => t.passenger === f);
+
+            if (filtered.length === 0) {
+                alert("Não há viagens para exportar no filtro selecionado!");
+                return;
+            }
+
+            const pdfContainer = document.createElement('div');
+            pdfContainer.className = "pdf-page-container";
+
+            const dataGeracao = new Date().toLocaleDateString('pt-BR');
+            const totalCusto = (filtered.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+
+            let pdfHTML = `
+                <div class="pdf-header">
+                    <h1 style="color:#1b5e20; margin:0; font-size:24px;">Relatório de Viagens - Xerém</h1>
+                    <p style="margin:5px 0; color:#555; font-size:14px;"><strong>Passageiro:</strong> ${f} | <strong>Gerado em:</strong> ${dataGeracao}</p>
+                </div>
+                <div style="background:#e8f5e9; border:1px solid #c8e6c9; padding:12px; border-radius:6px; margin-bottom:20px; display:flex; justify-content:space-between; font-size:16px;">
+                    <span><strong>Total de Viagens:</strong> ${filtered.length}</span>
+                    <span style="color:#1b5e20; font-weight:bold;">Valor Total: ${totalCusto}</span>
+                </div>
+                <div>
+            `;
+
+            [...filtered].reverse().forEach(t => {
+                pdfHTML += `
+                    <div class="pdf-card">
+                        <p style="margin: 0 0 5px 0; font-size:14px;">
+                            <strong>${t.passenger}</strong> 
+                            <span style="display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; color:#fff; font-weight:bold; background:${t.type==='Ida'?'#0288d1':'#f57c00'}">
+                                ${t.type}
+                            </span>
+                        </p>
+                        <p style="margin:0; font-size:13px; color:#555;">📅 ${t.date} | 🚘 Meio: ${t.notes}</p>
+                    </div>
+                `;
+            });
+
+            pdfHTML += `</div>`;
+            pdfContainer.innerHTML = pdfHTML;
+
+            const opt = {
+                margin: 15,
+                filename: `Viagens_Xerem_${f}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: 0
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            html2pdf().set(opt).from(pdfContainer).save();
+        }
+
+        // Inicializa buscando os dados do Google Sheets ao carregar a página
+        fetchTripsFromCloud();
+    </script>
+</body>
+</html>
