@@ -128,7 +128,6 @@
 
         #customNotesGroup { display: none; margin-top: 10px; }
 
-        /* Banner de aviso de gravação automática via QR Code */
         .qr-success-message {
             display: none;
             background: #e8f5e9;
@@ -142,7 +141,6 @@
             font-size: 16px;
         }
 
-        /* Estilos aplicados no papel PDF gerado */
         .pdf-page-container {
             font-family: Arial, sans-serif;
             padding: 10px;
@@ -250,6 +248,9 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbz2-8xldXs-VKsMiCIqwZyKR9K3Kl26VOCMHOiD47O9uQugqQZ1UK1zRBffD1vXnKMF/exec";
         const PRECO = 12.50;
         
+        // 🔑 COLOQUE SUA SENHA DE ADMINISTRADOR AQUI (substitua 'admin123' pela senha desejada)
+        const SENHA_ADMIN = "admin123"; 
+
         let trips = [];
 
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
@@ -283,7 +284,6 @@
             return selectValue;
         }
 
-        // Nova checagem do QR Code otimizada para evitar bloqueio de rede
         async function checkQRParameters() {
             const urlParams = new URLSearchParams(window.location.search);
             const qrPassenger = urlParams.get('nome');
@@ -292,10 +292,8 @@
 
             if (qrPassenger && qrType) {
                 const dt = new Date().toLocaleDateString('pt-BR');
-                
                 showLoading(`Registrando viagem rápida de ${qrPassenger}...`);
                 
-                // Salva diretamente
                 await saveTripToCloud({
                     date: dt,
                     passenger: qrPassenger,
@@ -303,12 +301,10 @@
                     notes: qrNotes
                 }, false);
 
-                // Mostra a confirmação visual na tela
                 const alertDiv = document.getElementById('qrAlert');
                 alertDiv.style.display = 'block';
                 alertDiv.innerHTML = `🎉 Viagem de ${qrType} salva com sucesso para ${qrPassenger}!<br><small>Transporte: ${qrNotes} | Data: ${dt}</small>`;
                 
-                // Limpa o link para não duplicar se a pessoa atualizar
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         }
@@ -335,11 +331,9 @@
             }
         }
 
-        // Salva com estrutura de envio compatível com CORS
         async function saveTripToCloud(tripData, reloadList = true) {
             showLoading("Enviando para a planilha...");
             try {
-                // Monta como formulário URL-Encoded (método à prova de falhas para o Apps Script)
                 const formBody = [];
                 for (const property in tripData) {
                     const encodedKey = encodeURIComponent(property);
@@ -416,14 +410,28 @@
             document.getElementById('date').value = new Date().toISOString().split('T')[0];
         }
 
+        // Função de limpar tudo protegida por Senha Administrativa
         async function clearAllData() {
-            const confirmacao1 = confirm("⚠️ ATENÇÃO: Apagar TODAS as viagens registradas?");
-            if (!confirmacao1) return;
+            if (trips.length === 0) {
+                alert("Não há dados cadastrados na nuvem para apagar.");
+                return;
+            }
 
-            const confirmacao2 = confirm("Confirmar exclusão definitiva?");
-            if (!confirmacao2) return;
+            // 1ª Barreira: Solicitação da Senha de Administrador
+            const senhaDigitada = prompt("🔐 Operação Restrita!\nDigite a senha de administrador para limpar o relatório:");
+            
+            if (senhaDigitada === null) return; // Se o usuário cancelar, interrompe
 
-            showLoading("Limpando histórico...");
+            if (senhaDigitada !== SENHA_ADMIN) {
+                alert("❌ Senha incorreta! Ação cancelada.");
+                return;
+            }
+
+            // 2ª Barreira: Confirmação dupla tradicional de segurança
+            const confirmacaoFinal = confirm("⚠️ ATENÇÃO: Senha aceita.\nTem certeza absoluta que deseja APAGAR DEFINITIVAMENTE todas as viagens registradas na planilha?");
+            if (!confirmacaoFinal) return;
+
+            showLoading("Limpando histórico na nuvem...");
             try {
                 await fetch(API_URL, {
                     method: 'POST',
@@ -433,10 +441,11 @@
 
                 setTimeout(async () => {
                     await fetchTripsFromCloud();
+                    alert("✅ Todo o histórico foi apagado com sucesso da nuvem.");
                 }, 1000);
                 
             } catch (error) {
-                alert("Erro ao limpar.");
+                alert("Erro ao tentar limpar.");
                 hideLoading();
             }
         }
@@ -518,9 +527,7 @@
         }
 
         async function init() {
-            // Executa o QR primeiro de forma limpa e rápida
             await checkQRParameters();
-            // Carrega a tabela na tela
             await fetchTripsFromCloud();
         }
 
