@@ -40,7 +40,6 @@
             position: relative;
         }
 
-        /* Indicador de carregamento em nuvem */
         #loadingOverlay {
             display: none;
             position: absolute;
@@ -129,6 +128,20 @@
 
         #customNotesGroup { display: none; margin-top: 10px; }
 
+        /* Banner de aviso de gravação automática via QR Code */
+        .qr-success-message {
+            display: none;
+            background: #e8f5e9;
+            border: 2px solid var(--primary);
+            color: var(--dark);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
         /* Estilos aplicados no papel PDF gerado */
         .pdf-page-container {
             font-family: Arial, sans-serif;
@@ -159,6 +172,8 @@
             <div class="spinner"></div>
             <span id="loadingText">Sincronizando com a Nuvem...</span>
         </div>
+
+        <div id="qrAlert" class="qr-success-message"></div>
 
         <h1>📍 Destino: Xerém</h1>
         
@@ -232,11 +247,10 @@
     </div>
 
     <script>
-        // URL da sua API Google Apps Script fornecida
         const API_URL = "https://script.google.com/macros/s/AKfycbz2-8xldXs-VKsMiCIqwZyKR9K3Kl26VOCMHOiD47O9uQugqQZ1UK1zRBffD1vXnKMF/exec";
         const PRECO = 12.50;
         
-        let trips = []; // Agora carregado direto da planilha Google
+        let trips = [];
 
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
@@ -269,15 +283,42 @@
             return selectValue;
         }
 
-        // Carrega as viagens da Planilha Google (doGet)
+        // Nova checagem do QR Code otimizada para evitar bloqueio de rede
+        async function checkQRParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const qrPassenger = urlParams.get('nome');
+            const qrType = urlParams.get('tipo'); 
+            const qrNotes = urlParams.get('transporte') || 'Carro do Berg';
+
+            if (qrPassenger && qrType) {
+                const dt = new Date().toLocaleDateString('pt-BR');
+                
+                showLoading(`Registrando viagem rápida de ${qrPassenger}...`);
+                
+                // Salva diretamente
+                await saveTripToCloud({
+                    date: dt,
+                    passenger: qrPassenger,
+                    type: qrType,
+                    notes: qrNotes
+                }, false);
+
+                // Mostra a confirmação visual na tela
+                const alertDiv = document.getElementById('qrAlert');
+                alertDiv.style.display = 'block';
+                alertDiv.innerHTML = `🎉 Viagem de ${qrType} salva com sucesso para ${qrPassenger}!<br><small>Transporte: ${qrNotes} | Data: ${dt}</small>`;
+                
+                // Limpa o link para não duplicar se a pessoa atualizar
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
         async function fetchTripsFromCloud() {
             showLoading("Buscando dados na nuvem...");
             try {
                 const response = await fetch(API_URL);
                 const rawData = await response.json();
                 
-                // Mapeia o formato da Planilha Google [Data, Nome, Tipo, Notas, Valor]
-                // para o objeto do nosso aplicativo de forma retrocompatível.
                 trips = rawData.map((row, index) => ({
                     id: index + 1,
                     date: row[0],
@@ -288,35 +329,44 @@
                 
                 render();
             } catch (error) {
-                console.error("Erro ao buscar dados:", error);
-                alert("Erro ao conectar com a Planilha Google. Verifique a internet.");
+                console.error("Erro ao buscar:", error);
             } finally {
                 hideLoading();
             }
         }
 
-        // Salva na planilha Google (doPost)
-        async function saveTripToCloud(tripData) {
-            showLoading("Enviando viagem para a nuvem...");
+        // Salva com estrutura de envio compatível com CORS
+        async function saveTripToCloud(tripData, reloadList = true) {
+            showLoading("Enviando para a planilha...");
             try {
+                // Monta como formulário URL-Encoded (método à prova de falhas para o Apps Script)
+                const formBody = [];
+                for (const property in tripData) {
+                    const encodedKey = encodeURIComponent(property);
+                    const encodedValue = encodeURIComponent(tripData[property]);
+                    formBody.push(encodedKey + "=" + encodedValue);
+                }
+                const formattedBody = formBody.join("&");
+
                 await fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // Necessário para evitar bloqueio de CORS do Google Apps Script
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
                     },
-                    body: JSON.stringify(tripData)
+                    body: formattedBody
                 });
                 
-                // Como 'no-cors' não nos dá a resposta diretamente, forçamos um delay pequeno
-                // e recarregamos os dados da planilha para atualizar a tela.
-                setTimeout(async () => {
-                    await fetchTripsFromCloud();
-                }, 1500);
+                if (reloadList) {
+                    setTimeout(async () => {
+                        await fetchTripsFromCloud();
+                    }, 1000);
+                } else {
+                    hideLoading();
+                }
 
             } catch (error) {
                 console.error("Erro ao salvar:", error);
-                alert("Ocorreu um problema ao registrar. Tente novamente.");
+                alert("Falha ao salvar. Tente de novo.");
                 hideLoading();
             }
         }
@@ -331,7 +381,7 @@
             const cVolta = document.getElementById('cVolta').checked;
 
             if (!cIda && !cVolta) {
-                alert("Selecione pelo menos Ida, Volta ou Ambas.");
+                alert("Selecione pelo menos uma opção.");
                 return;
             }
 
@@ -345,7 +395,6 @@
             }
 
             if (cVolta) {
-                // Pequeno delay para o ID/Data da linha não colidir no Google Sheets
                 setTimeout(async () => {
                     await saveTripToCloud({
                         date: dt,
@@ -367,30 +416,27 @@
             document.getElementById('date').value = new Date().toISOString().split('T')[0];
         }
 
-        // Função de limpar tudo via Nuvem
         async function clearAllData() {
-            const confirmacao1 = confirm("⚠️ ATENÇÃO: Deseja realmente APAGAR todas as viagens registradas na Planilha Google?");
+            const confirmacao1 = confirm("⚠️ ATENÇÃO: Apagar TODAS as viagens registradas?");
             if (!confirmacao1) return;
 
-            const confirmacao2 = confirm("Tem certeza absoluta? Isso limpará a sua planilha inteira!");
+            const confirmacao2 = confirm("Confirmar exclusão definitiva?");
             if (!confirmacao2) return;
 
-            showLoading("Limpando histórico na nuvem...");
+            showLoading("Limpando histórico...");
             try {
-                // Envia comando especial de limpeza para a API
                 await fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: "CLEAR_ALL" })
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: "action=CLEAR_ALL"
                 });
 
                 setTimeout(async () => {
                     await fetchTripsFromCloud();
-                }, 1500);
+                }, 1000);
                 
             } catch (error) {
-                alert("Erro ao tentar limpar o histórico na nuvem.");
+                alert("Erro ao limpar.");
                 hideLoading();
             }
         }
@@ -403,9 +449,8 @@
             document.getElementById('resTotal').innerText = (filtered.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 
             const list = document.getElementById('list');
-            list.innerHTML = filtered.length ? "" : "<p style='text-align:center; color:#999'>Nenhum registro encontrado na planilha.</p>";
+            list.innerHTML = filtered.length ? "" : "<p style='text-align:center; color:#999'>Nenhum registro encontrado.</p>";
 
-            // Exibe a lista (as mais recentes no topo)
             [...filtered].reverse().forEach(t => {
                 list.innerHTML += `
                     <div class="travel-card">
@@ -421,7 +466,7 @@
             const filtered = f === "Todos" ? trips : trips.filter(t => t.passenger === f);
 
             if (filtered.length === 0) {
-                alert("Não há viagens para exportar no filtro selecionado!");
+                alert("Sem dados para exportar.");
                 return;
             }
 
@@ -464,13 +509,7 @@
                 margin: 15,
                 filename: `Viagens_Xerem_${f}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
-                    useCORS: true, 
-                    logging: false,
-                    scrollX: 0,
-                    scrollY: 0
-                },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             };
@@ -478,8 +517,14 @@
             html2pdf().set(opt).from(pdfContainer).save();
         }
 
-        // Inicializa buscando os dados do Google Sheets ao carregar a página
-        fetchTripsFromCloud();
+        async function init() {
+            // Executa o QR primeiro de forma limpa e rápida
+            await checkQRParameters();
+            // Carrega a tabela na tela
+            await fetchTripsFromCloud();
+        }
+
+        init();
     </script>
 </body>
 </html>
