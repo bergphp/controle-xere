@@ -180,7 +180,6 @@
             <div class="form-group">
                 <label>Passageiro(a):</label>
                 <select id="passenger">
-                    <option value="Berg">Berg</option>
                     <option value="Gabriel">Gabriel</option>
                     <option value="Rafael">Rafael</option>
                     <option value="Juliana">Juliana</option>
@@ -223,7 +222,6 @@
             <label>Filtrar por Nome:</label>
             <select id="filter" onchange="render()">
                 <option value="Todos">Todos os Passageiros</option>
-                <option value="Berg">Berg</option>
                 <option value="Gabriel">Gabriel</option>
                 <option value="Rafael">Rafael</option>
                 <option value="Juliana">Juliana</option>
@@ -248,8 +246,8 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbz2-8xldXs-VKsMiCIqwZyKR9K3Kl26VOCMHOiD47O9uQugqQZ1UK1zRBffD1vXnKMF/exec";
         const PRECO = 12.50;
         
-        // 🔑 COLOQUE SUA SENHA DE ADMINISTRADOR AQUI (substitua 'admin123' pela senha desejada)
-        const SENHA_ADMIN = "#Berg3408"; 
+        // Sua senha de administrador
+        const SENHA_ADMIN = "admin123"; 
 
         let trips = [];
 
@@ -410,24 +408,21 @@
             document.getElementById('date').value = new Date().toISOString().split('T')[0];
         }
 
-        // Função de limpar tudo protegida por Senha Administrativa
         async function clearAllData() {
             if (trips.length === 0) {
                 alert("Não há dados cadastrados na nuvem para apagar.");
                 return;
             }
 
-            // 1ª Barreira: Solicitação da Senha de Administrador
             const senhaDigitada = prompt("🔐 Operação Restrita!\nDigite a senha de administrador para limpar o relatório:");
             
-            if (senhaDigitada === null) return; // Se o usuário cancelar, interrompe
+            if (senhaDigitada === null) return; 
 
             if (senhaDigitada !== SENHA_ADMIN) {
                 alert("❌ Senha incorreta! Ação cancelada.");
                 return;
             }
 
-            // 2ª Barreira: Confirmação dupla tradicional de segurança
             const confirmacaoFinal = confirm("⚠️ ATENÇÃO: Senha aceita.\nTem certeza absoluta que deseja APAGAR DEFINITIVAMENTE todas as viagens registradas na planilha?");
             if (!confirmacaoFinal) return;
 
