@@ -245,9 +245,7 @@
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbz2-8xldXs-VKsMiCIqwZyKR9K3Kl26VOCMHOiD47O9uQugqQZ1UK1zRBffD1vXnKMF/exec";
         const PRECO = 12.50;
-        
-        // Sua senha de administrador
-        const SENHA_ADMIN = "#Berg3408"; 
+        const SENHA_ADMIN = "admin123"; 
 
         let trips = [];
 
@@ -282,6 +280,42 @@
             return selectValue;
         }
 
+        // Função auxiliar inteligente para formatar qualquer string de data vinda da planilha
+        function formatDateTime(rawDateStr) {
+            if (!rawDateStr) return "Data indisponível";
+            
+            try {
+                const dataObj = new Date(rawDateStr);
+                
+                // Se o Sheets mandou um texto puro que não virou data válida, retorna ele mesmo
+                if (isNaN(dataObj.getTime())) {
+                    return rawDateStr;
+                }
+
+                // Ajusta o fuso horário para o horário local do celular
+                const dataFormatada = dataObj.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+
+                const horaFormatada = dataObj.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                // Caso a hora venha zerada do servidor (00:00:00), exibe apenas a data
+                if (horaFormatada === "00:00:00") {
+                    return `${dataFormatada}`;
+                }
+
+                return `${dataFormatada} às ${horaFormatada}`;
+            } catch (e) {
+                return rawDateStr;
+            }
+        }
+
         async function checkQRParameters() {
             const urlParams = new URLSearchParams(window.location.search);
             const qrPassenger = urlParams.get('nome');
@@ -289,11 +323,12 @@
             const qrNotes = urlParams.get('transporte') || 'Carro do Berg';
 
             if (qrPassenger && qrType) {
-                const dt = new Date().toLocaleDateString('pt-BR');
+                // Ao registrar por QR Code, envia o ISO string com a hora exata do clique
+                const dtIso = new Date().toISOString(); 
                 showLoading(`Registrando viagem rápida de ${qrPassenger}...`);
                 
                 await saveTripToCloud({
-                    date: dt,
+                    date: dtIso,
                     passenger: qrPassenger,
                     type: qrType,
                     notes: qrNotes
@@ -301,7 +336,7 @@
 
                 const alertDiv = document.getElementById('qrAlert');
                 alertDiv.style.display = 'block';
-                alertDiv.innerHTML = `🎉 Viagem de ${qrType} salva com sucesso para ${qrPassenger}!<br><small>Transporte: ${qrNotes} | Data: ${dt}</small>`;
+                alertDiv.innerHTML = `🎉 Viagem de ${qrType} salva com sucesso para ${qrPassenger}!`;
                 
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
@@ -366,9 +401,14 @@
         document.getElementById('travelForm').onsubmit = async (e) => {
             e.preventDefault();
             const pass = document.getElementById('passenger').value;
-            const dt = document.getElementById('date').value.split('-').reverse().join('/');
-            const nt = getSelectedNotes();
+            
+            // Pega a data selecionada no calendário e adiciona o horário atual exato do dispositivo
+            const inputDate = document.getElementById('date').value; 
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0]; // Ex: "14:30:15"
+            const fullDateTime = new Date(`${inputDate}T${timeStr}`);
 
+            const nt = getSelectedNotes();
             const cIda = document.getElementById('cIda').checked;
             const cVolta = document.getElementById('cVolta').checked;
 
@@ -379,7 +419,7 @@
 
             if (cIda) {
                 await saveTripToCloud({
-                    date: dt,
+                    date: fullDateTime.toISOString(),
                     passenger: pass,
                     type: 'Ida',
                     notes: nt
@@ -389,7 +429,7 @@
             if (cVolta) {
                 setTimeout(async () => {
                     await saveTripToCloud({
-                        date: dt,
+                        date: fullDateTime.toISOString(),
                         passenger: pass,
                         type: 'Volta',
                         notes: nt
@@ -415,9 +455,7 @@
             }
 
             const senhaDigitada = prompt("🔐 Operação Restrita!\nDigite a senha de administrador para limpar o relatório:");
-            
             if (senhaDigitada === null) return; 
-
             if (senhaDigitada !== SENHA_ADMIN) {
                 alert("❌ Senha incorreta! Ação cancelada.");
                 return;
@@ -459,7 +497,7 @@
                 list.innerHTML += `
                     <div class="travel-card">
                         <p><strong>${t.passenger}</strong> <span class="badge ${t.type==='Ida'?'badge-ida':'badge-volta'}">${t.type}</span></p>
-                        <p>📅 ${t.date} | 🚘 ${t.notes}</p>
+                        <p>📅 ${formatDateTime(t.date)} | 🚘 ${t.notes}</p>
                     </div>
                 `;
             });
@@ -501,7 +539,7 @@
                                 ${t.type}
                             </span>
                         </p>
-                        <p style="margin:0; font-size:13px; color:#555;">📅 ${t.date} | 🚘 Meio: ${t.notes}</p>
+                        <p style="margin:0; font-size:13px; color:#555;">📅 ${formatDateTime(t.date)} | 🚘 Meio: ${t.notes}</p>
                     </div>
                 `;
             });
