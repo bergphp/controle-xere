@@ -141,10 +141,14 @@
             font-size: 16px;
         }
 
+        /* Estilos específicos para a geração do PDF */
         .pdf-page-container {
             font-family: Arial, sans-serif;
-            padding: 10px;
+            padding: 20px;
             color: #333;
+            background-color: white;
+            width: 750px; /* Largura ideal para simular A4 no html2pdf */
+            margin: 0 auto;
         }
         .pdf-header {
             text-align: center;
@@ -156,10 +160,10 @@
             background: #ffffff;
             border: 1px solid #ddd;
             border-left: 5px solid #4caf50;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            page-break-inside: avoid;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            page-break-inside: avoid; /* Evita que o card seja cortado entre páginas */
         }
     </style>
 </head>
@@ -245,7 +249,7 @@
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbz2-8xldXs-VKsMiCIqwZyKR9K3Kl26VOCMHOiD47O9uQugqQZ1UK1zRBffD1vXnKMF/exec";
         const PRECO = 12.50;
-        const SENHA_ADMIN = "#Berg3408"; 
+        const SENHA_ADMIN = "admin123"; 
 
         let trips = [];
 
@@ -280,37 +284,14 @@
             return selectValue;
         }
 
-        // Função auxiliar inteligente para formatar qualquer string de data vinda da planilha
         function formatDateTime(rawDateStr) {
             if (!rawDateStr) return "Data indisponível";
-            
             try {
                 const dataObj = new Date(rawDateStr);
-                
-                // Se o Sheets mandou um texto puro que não virou data válida, retorna ele mesmo
-                if (isNaN(dataObj.getTime())) {
-                    return rawDateStr;
-                }
-
-                // Ajusta o fuso horário para o horário local do celular
-                const dataFormatada = dataObj.toLocaleDateString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-
-                const horaFormatada = dataObj.toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-
-                // Caso a hora venha zerada do servidor (00:00:00), exibe apenas a data
-                if (horaFormatada === "00:00:00") {
-                    return `${dataFormatada}`;
-                }
-
-                return `${dataFormatada} às ${horaFormatada}`;
+                if (isNaN(dataObj.getTime())) return rawDateStr;
+                const dataFormatada = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                return horaFormatada === "00:00:00" ? dataFormatada : `${dataFormatada} às ${horaFormatada}`;
             } catch (e) {
                 return rawDateStr;
             }
@@ -323,21 +304,12 @@
             const qrNotes = urlParams.get('transporte') || 'Carro do Berg';
 
             if (qrPassenger && qrType) {
-                // Ao registrar por QR Code, envia o ISO string com a hora exata do clique
                 const dtIso = new Date().toISOString(); 
                 showLoading(`Registrando viagem rápida de ${qrPassenger}...`);
-                
-                await saveTripToCloud({
-                    date: dtIso,
-                    passenger: qrPassenger,
-                    type: qrType,
-                    notes: qrNotes
-                }, false);
-
+                await saveTripToCloud({ date: dtIso, passenger: qrPassenger, type: qrType, notes: qrNotes }, false);
                 const alertDiv = document.getElementById('qrAlert');
                 alertDiv.style.display = 'block';
                 alertDiv.innerHTML = `🎉 Viagem de ${qrType} salva com sucesso para ${qrPassenger}!`;
-                
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         }
@@ -347,21 +319,9 @@
             try {
                 const response = await fetch(API_URL);
                 const rawData = await response.json();
-                
-                trips = rawData.map((row, index) => ({
-                    id: index + 1,
-                    date: row[0],
-                    passenger: row[1],
-                    type: row[2],
-                    notes: row[3]
-                }));
-                
+                trips = rawData.map((row, index) => ({ id: index + 1, date: row[0], passenger: row[1], type: row[2], notes: row[3] }));
                 render();
-            } catch (error) {
-                console.error("Erro ao buscar:", error);
-            } finally {
-                hideLoading();
-            }
+            } catch (error) { console.error("Erro ao buscar:", error); } finally { hideLoading(); }
         }
 
         async function saveTripToCloud(tripData, reloadList = true) {
@@ -369,74 +329,28 @@
             try {
                 const formBody = [];
                 for (const property in tripData) {
-                    const encodedKey = encodeURIComponent(property);
-                    const encodedValue = encodeURIComponent(tripData[property]);
-                    formBody.push(encodedKey + "=" + encodedValue);
+                    formBody.push(encodeURIComponent(property) + "=" + encodeURIComponent(tripData[property]));
                 }
-                const formattedBody = formBody.join("&");
-
-                await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-                    },
-                    body: formattedBody
-                });
-                
-                if (reloadList) {
-                    setTimeout(async () => {
-                        await fetchTripsFromCloud();
-                    }, 1000);
-                } else {
-                    hideLoading();
-                }
-
-            } catch (error) {
-                console.error("Erro ao salvar:", error);
-                alert("Falha ao salvar. Tente de novo.");
-                hideLoading();
-            }
+                await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: formBody.join("&") });
+                if (reloadList) setTimeout(async () => { await fetchTripsFromCloud(); }, 1000);
+                else hideLoading();
+            } catch (error) { console.error("Erro ao salvar:", error); alert("Falha ao salvar."); hideLoading(); }
         }
 
         document.getElementById('travelForm').onsubmit = async (e) => {
             e.preventDefault();
             const pass = document.getElementById('passenger').value;
-            
-            // Pega a data selecionada no calendário e adiciona o horário atual exato do dispositivo
             const inputDate = document.getElementById('date').value; 
             const now = new Date();
-            const timeStr = now.toTimeString().split(' ')[0]; // Ex: "14:30:15"
+            const timeStr = now.toTimeString().split(' ')[0];
             const fullDateTime = new Date(`${inputDate}T${timeStr}`);
-
             const nt = getSelectedNotes();
             const cIda = document.getElementById('cIda').checked;
             const cVolta = document.getElementById('cVolta').checked;
 
-            if (!cIda && !cVolta) {
-                alert("Selecione pelo menos uma opção.");
-                return;
-            }
-
-            if (cIda) {
-                await saveTripToCloud({
-                    date: fullDateTime.toISOString(),
-                    passenger: pass,
-                    type: 'Ida',
-                    notes: nt
-                });
-            }
-
-            if (cVolta) {
-                setTimeout(async () => {
-                    await saveTripToCloud({
-                        date: fullDateTime.toISOString(),
-                        passenger: pass,
-                        type: 'Volta',
-                        notes: nt
-                    });
-                }, 1000);
-            }
-            
+            if (!cIda && !cVolta) { alert("Selecione pelo menos uma opção."); return; }
+            if (cIda) await saveTripToCloud({ date: fullDateTime.toISOString(), passenger: pass, type: 'Ida', notes: nt });
+            if (cVolta) setTimeout(async () => { await saveTripToCloud({ date: fullDateTime.toISOString(), passenger: pass, type: 'Volta', notes: nt }); }, 1000);
             resetForm();
         };
 
@@ -449,72 +363,36 @@
         }
 
         async function clearAllData() {
-            if (trips.length === 0) {
-                alert("Não há dados cadastrados na nuvem para apagar.");
-                return;
-            }
-
-            const senhaDigitada = prompt("🔐 Operação Restrita!\nDigite a senha de administrador para limpar o relatório:");
-            if (senhaDigitada === null) return; 
-            if (senhaDigitada !== SENHA_ADMIN) {
-                alert("❌ Senha incorreta! Ação cancelada.");
-                return;
-            }
-
-            const confirmacaoFinal = confirm("⚠️ ATENÇÃO: Senha aceita.\nTem certeza absoluta que deseja APAGAR DEFINITIVAMENTE todas as viagens registradas na planilha?");
-            if (!confirmacaoFinal) return;
-
-            showLoading("Limpando histórico na nuvem...");
+            if (trips.length === 0) { alert("Não há dados."); return; }
+            const senhaDigitada = prompt("🔐 Digite a senha:");
+            if (senhaDigitada !== SENHA_ADMIN) { alert("❌ Incorreta."); return; }
+            if (!confirm("⚠️ Apagar tudo?")) return;
+            showLoading("Limpando...");
             try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-                    body: "action=CLEAR_ALL"
-                });
-
-                setTimeout(async () => {
-                    await fetchTripsFromCloud();
-                    alert("✅ Todo o histórico foi apagado com sucesso da nuvem.");
-                }, 1000);
-                
-            } catch (error) {
-                alert("Erro ao tentar limpar.");
-                hideLoading();
-            }
+                await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: "action=CLEAR_ALL" });
+                setTimeout(async () => { await fetchTripsFromCloud(); alert("✅ Apagado."); }, 1000);
+            } catch (error) { alert("Erro."); hideLoading(); }
         }
 
         function render() {
             const f = document.getElementById('filter').value;
             const filtered = f === "Todos" ? trips : trips.filter(t => t.passenger === f);
-            
             document.getElementById('resCount').innerText = filtered.length;
             document.getElementById('resTotal').innerText = (filtered.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-
             const list = document.getElementById('list');
             list.innerHTML = filtered.length ? "" : "<p style='text-align:center; color:#999'>Nenhum registro encontrado.</p>";
-
             [...filtered].reverse().forEach(t => {
-                list.innerHTML += `
-                    <div class="travel-card">
-                        <p><strong>${t.passenger}</strong> <span class="badge ${t.type==='Ida'?'badge-ida':'badge-volta'}">${t.type}</span></p>
-                        <p>📅 ${formatDateTime(t.date)} | 🚘 ${t.notes}</p>
-                    </div>
-                `;
+                list.innerHTML += `<div class="travel-card"><p><strong>${t.passenger}</strong> <span class="badge ${t.type==='Ida'?'badge-ida':'badge-volta'}">${t.type}</span></p><p>📅 ${formatDateTime(t.date)} | 🚘 ${t.notes}</p></div>`;
             });
         }
 
         function downloadPDF() {
             const f = document.getElementById('filter').value;
             const filtered = f === "Todos" ? trips : trips.filter(t => t.passenger === f);
-
-            if (filtered.length === 0) {
-                alert("Sem dados para exportar.");
-                return;
-            }
+            if (filtered.length === 0) { alert("Sem dados."); return; }
 
             const pdfContainer = document.createElement('div');
             pdfContainer.className = "pdf-page-container";
-
             const dataGeracao = new Date().toLocaleDateString('pt-BR');
             const totalCusto = (filtered.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 
@@ -524,8 +402,8 @@
                     <p style="margin:5px 0; color:#555; font-size:14px;"><strong>Passageiro:</strong> ${f} | <strong>Gerado em:</strong> ${dataGeracao}</p>
                 </div>
                 <div style="background:#e8f5e9; border:1px solid #c8e6c9; padding:12px; border-radius:6px; margin-bottom:20px; display:flex; justify-content:space-between; font-size:16px;">
-                    <span><strong>Total de Viagens:</strong> ${filtered.length}</span>
-                    <span style="color:#1b5e20; font-weight:bold;">Valor Total: ${totalCusto}</span>
+                    <span><strong>Total:</strong> ${filtered.length} viagens</span>
+                    <span style="color:#1b5e20; font-weight:bold;">Total: ${totalCusto}</span>
                 </div>
                 <div>
             `;
@@ -533,37 +411,38 @@
             [...filtered].reverse().forEach(t => {
                 pdfHTML += `
                     <div class="pdf-card">
-                        <p style="margin: 0 0 5px 0; font-size:14px;">
+                        <p style="margin:0 0 5px 0; font-size:15px;">
                             <strong>${t.passenger}</strong> 
-                            <span style="display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; color:#fff; font-weight:bold; background:${t.type==='Ida'?'#0288d1':'#f57c00'}">
-                                ${t.type}
-                            </span>
+                            <span style="display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; color:#fff; font-weight:bold; background:${t.type==='Ida'?'#0288d1':'#f57c00'}">${t.type}</span>
                         </p>
-                        <p style="margin:0; font-size:13px; color:#555;">📅 ${formatDateTime(t.date)} | 🚘 Meio: ${t.notes}</p>
-                    </div>
-                `;
+                        <p style="margin:0; font-size:14px; color:#444;">📅 ${formatDateTime(t.date)} | 🚘 ${t.notes}</p>
+                    </div>`;
             });
 
             pdfHTML += `</div>`;
             pdfContainer.innerHTML = pdfHTML;
 
+            // Configurações otimizadas para evitar cortes
             const opt = {
-                margin: 15,
-                filename: `Viagens_Xerem_${f}.pdf`,
+                margin: [10, 10, 10, 10], // Margens da folha (cima, direita, baixo, esquerda)
+                filename: `Relatorio_Xerem_${f}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, 
+                    letterRendering: true,
+                    width: 750 // Força a captura da largura exata do contêiner
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            html2pdf().set(opt).from(pdfContainer).save();
+            showLoading("Gerando PDF, aguarde...");
+            html2pdf().set(opt).from(pdfContainer).save().then(() => {
+                hideLoading();
+            });
         }
 
-        async function init() {
-            await checkQRParameters();
-            await fetchTripsFromCloud();
-        }
-
+        async function init() { await checkQRParameters(); await fetchTripsFromCloud(); }
         init();
     </script>
 </body>
