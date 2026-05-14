@@ -7,70 +7,160 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
-            --primary: #2e7d32; --primary-light: #4caf50; --dark: #1b5e20;
-            --bg: #f1f8e9; --card: #ffffff; --text: #333333;
-            --pdf-btn: #d32f2f; --clear-btn: #c62828;
+            --primary: #2e7d32;
+            --primary-light: #4caf50;
+            --dark: #1b5e20;
+            --bg: #f1f8e9;
+            --card: #ffffff;
+            --text: #333333;
+            --pdf-btn: #d32f2f;
+            --edit-btn: #f57c00;
+            --delete-btn: #d32f2f;
+            --clear-btn: #c62828;
         }
 
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             background-color: var(--bg);
             color: var(--text);
-            margin: 0; padding: 20px;
-            display: flex; flex-direction: column; align-items: center;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .container {
-            max-width: 600px; width: 100%;
-            background: var(--card); padding: 25px;
-            border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+            background: var(--card);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             position: relative;
         }
 
         #loadingOverlay {
-            display: none; position: absolute;
+            display: none;
+            position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.9);
-            border-radius: 12px; z-index: 100;
-            justify-content: center; align-items: center;
-            flex-direction: column; font-weight: bold;
+            background: rgba(255,255,255,0.85);
+            border-radius: 12px;
+            z-index: 10;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-weight: bold;
+            color: var(--dark);
         }
 
         .spinner {
-            border: 4px solid #f3f3f3; border-top: 4px solid var(--primary);
-            border-radius: 50%; width: 30px; height: 30px;
-            animation: spin 1s linear infinite; margin-bottom: 10px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
         }
 
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
         h1, h2 { text-align: center; color: var(--dark); }
+        h2 { font-size: 18px; border-bottom: 2px solid var(--bg); padding-bottom: 8px; color: var(--primary); margin-top: 25px; }
+
         .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
         label { font-weight: 600; margin-bottom: 5px; font-size: 14px; }
-        select, input, button { padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; }
+
+        select, input, button { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; outline: none; }
         
-        .checkbox-group { display: flex; gap: 15px; }
-        .checkbox-label { display: flex; align-items: center; gap: 8px; background: #eee; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        .checkbox-group { display: flex; gap: 15px; margin-top: 5px; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #eee; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
 
         button { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        .btn-pdf { background-color: var(--pdf-btn); width: 100%; margin-bottom: 10px; }
-        .btn-clear { background-color: transparent; color: var(--clear-btn); border: 1px solid var(--clear-btn); width: 100%; font-size: 13px; margin-top: 20px; }
+        button:hover { background-color: var(--dark); }
 
-        .summary-box {
-            background: #e8f5e9; padding: 15px; border-radius: 8px;
-            margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
+        .btn-pdf { background-color: var(--pdf-btn); width: 100%; margin-bottom: 10px; }
+
+        .btn-clear {
+            background-color: #fff;
+            color: var(--clear-btn);
+            border: 1px solid var(--clear-btn);
+            width: 100%;
+            margin-bottom: 20px;
+            font-size: 14px;
+            padding: 8px;
+            transition: all 0.2s;
+        }
+        .btn-clear:hover {
+            background-color: var(--clear-btn);
+            color: white;
         }
 
+        .summary-box {
+            background: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-value { font-size: 20px; font-weight: bold; color: var(--dark); }
+
         .travel-card {
-            background: white; padding: 12px; border-radius: 6px;
-            margin-bottom: 10px; border: 1px solid #ddd; border-left: 5px solid var(--primary-light);
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-left: 5px solid var(--primary-light);
         }
 
         .badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; color: white; font-weight: bold; }
-        .badge-ida { background: #0288d1; } .badge-volta { background: #f57c00; }
+        .badge-ida { background: #0288d1; }
+        .badge-volta { background: #f57c00; }
 
-        /* Estilo oculto que só o PDF usará */
-        #pdf-template { display: none; }
+        #customNotesGroup { display: none; margin-top: 10px; }
+
+        .qr-success-message {
+            display: none;
+            background: #e8f5e9;
+            border: 2px solid var(--primary);
+            color: var(--dark);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .pdf-page-container {
+            font-family: Arial, sans-serif;
+            padding: 10px;
+            color: #333;
+        }
+        .pdf-header {
+            text-align: center;
+            border-bottom: 3px solid #2e7d32;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .pdf-card {
+            background: #ffffff;
+            border: 1px solid #ddd;
+            border-left: 5px solid #4caf50;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            page-break-inside: avoid;
+        }
     </style>
 </head>
 <body>
@@ -78,12 +168,15 @@
     <div class="container">
         <div id="loadingOverlay">
             <div class="spinner"></div>
-            <span id="loadingText">Aguarde...</span>
+            <span id="loadingText">Sincronizando com a Nuvem...</span>
         </div>
+
+        <div id="qrAlert" class="qr-success-message"></div>
 
         <h1>📍 Destino: Xerém</h1>
         
         <form id="travelForm">
+            <h2 id="formTitle">Registrar Viagem</h2>
             <div class="form-group">
                 <label>Passageiro(a):</label>
                 <select id="passenger">
@@ -93,7 +186,7 @@
                 </select>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="dirGroup">
                 <label>Tipo:</label>
                 <div class="checkbox-group">
                     <label class="checkbox-label"><input type="checkbox" id="cIda" checked> Ida</label>
@@ -107,176 +200,371 @@
             </div>
 
             <div class="form-group">
-                <label>Transporte:</label>
+                <label>Notas / Meio de Transporte:</label>
                 <select id="notesSelect" onchange="toggleCustomNotes()">
                     <option value="Carro do Berg">Carro do Berg</option>
                     <option value="Uber">Uber</option>
                     <option value="Outro">Outro...</option>
                 </select>
-                <input type="text" id="customNotes" style="display:none; margin-top:5px;" placeholder="Qual?">
+                <div id="customNotesGroup">
+                    <input type="text" id="customNotes" placeholder="Digite a observação personalizada">
+                </div>
             </div>
 
             <button type="submit" id="btnSubmit">Salvar na Nuvem</button>
         </form>
 
-        <hr style="margin: 25px 0;">
+        <br><hr><br>
 
-        <h2>Relatório Financeiro</h2>
+        <h2>Relatório Financeiro (Nuvem)</h2>
         
         <div class="form-group">
-            <label>Filtrar Nome:</label>
+            <label>Filtrar por Nome:</label>
             <select id="filter" onchange="render()">
-                <option value="Todos">Todos</option>
+                <option value="Todos">Todos os Passageiros</option>
                 <option value="Gabriel">Gabriel</option>
                 <option value="Rafael">Rafael</option>
                 <option value="Juliana">Juliana</option>
             </select>
         </div>
 
-        <button class="btn-pdf" onclick="downloadPDF()">📄 Baixar PDF</button>
+        <button class="btn-pdf" onclick="downloadPDF()">📄 Baixar PDF do Relatório</button>
+        <button class="btn-clear" onclick="clearAllData()">⚠️ Limpar Todo o Histórico</button>
 
         <div class="summary-box">
-            <div><p>Qtd: <span id="resCount">0</span></p></div>
-            <div style="font-size: 20px; font-weight: bold;" id="resTotal">R$ 0,00</div>
+            <div>
+                <p>Qtd: <span id="resCount">0</span></p>
+                <small>R$ 12,50 cada</small>
+            </div>
+            <div class="summary-value" id="resTotal">R$ 0,00</div>
         </div>
 
         <div id="list"></div>
-
-        <button class="btn-clear" onclick="clearAllData()">⚠️ Limpar Tudo</button>
     </div>
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbz2-8xldXs-VKsMiCIqwZyKR9K3Kl26VOCMHOiD47O9uQugqQZ1UK1zRBffD1vXnKMF/exec";
         const PRECO = 12.50;
+        const SENHA_ADMIN = "admin123"; 
+
         let trips = [];
 
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
-        function showLoading(t) { document.getElementById('loadingText').innerText = t; document.getElementById('loadingOverlay').style.display = 'flex'; }
-        function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
-
-        function toggleCustomNotes() {
-            const isOutro = document.getElementById('notesSelect').value === 'Outro';
-            document.getElementById('customNotes').style.display = isOutro ? 'block' : 'none';
+        function showLoading(text) {
+            document.getElementById('loadingText').innerText = text;
+            document.getElementById('loadingOverlay').style.display = 'flex';
         }
 
-        function formatDateTime(raw) {
-            if (!raw) return "-";
-            const d = new Date(raw);
-            if (isNaN(d.getTime())) return raw;
-            const dataF = d.toLocaleDateString('pt-BR');
-            const horaF = d.toLocaleTimeString('pt-BR');
-            return horaF === "00:00:00" ? dataF : `${dataF} às ${horaF}`;
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function toggleCustomNotes() {
+            const selectValue = document.getElementById('notesSelect').value;
+            const customGroup = document.getElementById('customNotesGroup');
+            if (selectValue === 'Outro') {
+                customGroup.style.display = 'block';
+                document.getElementById('customNotes').required = true;
+            } else {
+                customGroup.style.display = 'none';
+                document.getElementById('customNotes').required = false;
+            }
+        }
+
+        function getSelectedNotes() {
+            const selectValue = document.getElementById('notesSelect').value;
+            if (selectValue === 'Outro') {
+                return document.getElementById('customNotes').value || "Sem detalhes";
+            }
+            return selectValue;
+        }
+
+        // Função auxiliar inteligente para formatar qualquer string de data vinda da planilha
+        function formatDateTime(rawDateStr) {
+            if (!rawDateStr) return "Data indisponível";
+            
+            try {
+                const dataObj = new Date(rawDateStr);
+                
+                // Se o Sheets mandou um texto puro que não virou data válida, retorna ele mesmo
+                if (isNaN(dataObj.getTime())) {
+                    return rawDateStr;
+                }
+
+                // Ajusta o fuso horário para o horário local do celular
+                const dataFormatada = dataObj.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+
+                const horaFormatada = dataObj.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                // Caso a hora venha zerada do servidor (00:00:00), exibe apenas a data
+                if (horaFormatada === "00:00:00") {
+                    return `${dataFormatada}`;
+                }
+
+                return `${dataFormatada} às ${horaFormatada}`;
+            } catch (e) {
+                return rawDateStr;
+            }
+        }
+
+        async function checkQRParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const qrPassenger = urlParams.get('nome');
+            const qrType = urlParams.get('tipo'); 
+            const qrNotes = urlParams.get('transporte') || 'Carro do Berg';
+
+            if (qrPassenger && qrType) {
+                // Ao registrar por QR Code, envia o ISO string com a hora exata do clique
+                const dtIso = new Date().toISOString(); 
+                showLoading(`Registrando viagem rápida de ${qrPassenger}...`);
+                
+                await saveTripToCloud({
+                    date: dtIso,
+                    passenger: qrPassenger,
+                    type: qrType,
+                    notes: qrNotes
+                }, false);
+
+                const alertDiv = document.getElementById('qrAlert');
+                alertDiv.style.display = 'block';
+                alertDiv.innerHTML = `🎉 Viagem de ${qrType} salva com sucesso para ${qrPassenger}!`;
+                
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
         }
 
         async function fetchTripsFromCloud() {
-            showLoading("Buscando dados...");
+            showLoading("Buscando dados na nuvem...");
             try {
-                const r = await fetch(API_URL);
-                const data = await r.json();
-                trips = data.map(row => ({ date: row[0], passenger: row[1], type: row[2], notes: row[3] }));
+                const response = await fetch(API_URL);
+                const rawData = await response.json();
+                
+                trips = rawData.map((row, index) => ({
+                    id: index + 1,
+                    date: row[0],
+                    passenger: row[1],
+                    type: row[2],
+                    notes: row[3]
+                }));
+                
                 render();
-            } catch (e) { alert("Erro ao carregar dados."); }
-            finally { hideLoading(); }
-        }
-
-        async function saveTripToCloud(trip) {
-            showLoading("Salvando...");
-            const body = Object.keys(trip).map(k => encodeURIComponent(k)+'='+encodeURIComponent(trip[k])).join('&');
-            await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
-        }
-
-        document.getElementById('travelForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const p = document.getElementById('passenger').value;
-            const d = document.getElementById('date').value;
-            const fullD = new Date(`${d}T${new Date().toTimeString().split(' ')[0]}`).toISOString();
-            const n = document.getElementById('notesSelect').value === 'Outro' ? document.getElementById('customNotes').value : document.getElementById('notesSelect').value;
-            
-            if (document.getElementById('cIda').checked) await saveTripToCloud({ date: fullD, passenger: p, type: 'Ida', notes: n });
-            if (document.getElementById('cVolta').checked) await saveTripToCloud({ date: fullD, passenger: p, type: 'Volta', notes: n });
-            
-            location.reload();
-        };
-
-        function render() {
-            const f = document.getElementById('filter').value;
-            const filtered = f === "Todos" ? trips : trips.filter(t => t.passenger === f);
-            document.getElementById('resCount').innerText = filtered.length;
-            document.getElementById('resTotal').innerText = (filtered.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-            const list = document.getElementById('list');
-            list.innerHTML = filtered.reverse().map(t => `
-                <div class="travel-card">
-                    <p><strong>${t.passenger}</strong> <span class="badge ${t.type==='Ida'?'badge-ida':'badge-volta'}">${t.type}</span></p>
-                    <p style="font-size:13px; color:#666">📅 ${formatDateTime(t.date)} | 🚘 ${t.notes}</p>
-                </div>
-            `).join('');
-        }
-
-        async function downloadPDF() {
-            const f = document.getElementById('filter').value;
-            const filtered = f === "Todos" ? trips : trips.filter(t => t.passenger === f);
-            if(!filtered.length) return alert("Sem dados.");
-
-            showLoading("Gerando Relatório...");
-
-            // Criar um container temporário fora da visão para o PDF
-            const worker = document.createElement('div');
-            worker.style.padding = "20px";
-            worker.style.width = "700px"; // Largura fixa para evitar cortes
-            worker.style.background = "white";
-
-            let html = `
-                <div style="text-align:center; border-bottom:2px solid #2e7d32; padding-bottom:10px; margin-bottom:20px;">
-                    <h1 style="margin:0; color:#1b5e20;">Relatório de Viagens - Xerém</h1>
-                    <p>Filtro: ${f} | Gerado em: ${new Date().toLocaleDateString('pt-BR')}</p>
-                </div>
-                <div style="display:flex; justify-content:space-between; background:#f1f8e9; padding:15px; border-radius:8px; margin-bottom:20px;">
-                    <b>Total de Viagens: ${filtered.length}</b>
-                    <b style="color:#2e7d32;">Valor Total: ${(filtered.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</b>
-                </div>
-            `;
-
-            filtered.forEach(t => {
-                html += `
-                    <div style="border:1px solid #ddd; border-left:5px solid #4caf50; padding:10px; margin-bottom:8px; border-radius:4px; page-break-inside:avoid;">
-                        <div style="display:flex; justify-content:space-between;">
-                            <b>${t.passenger} (${t.type})</b>
-                            <span style="font-size:12px; color:#666;">${formatDateTime(t.date)}</span>
-                        </div>
-                        <div style="font-size:13px; margin-top:5px;">Transporte: ${t.notes}</div>
-                    </div>
-                `;
-            });
-
-            worker.innerHTML = html;
-            document.body.appendChild(worker); // Adiciona temporariamente para o html2canvas ler
-
-            const opt = {
-                margin: 10,
-                filename: `Relatorio_Xerem_${f}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false, width: 700 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            try {
-                await html2pdf().set(opt).from(worker).save();
+            } catch (error) {
+                console.error("Erro ao buscar:", error);
             } finally {
-                document.body.removeChild(worker);
                 hideLoading();
             }
         }
 
-        async function clearAllData() {
-            if (confirm("Apagar TUDO da planilha?")) {
-                showLoading("Limpando...");
-                await saveTripToCloud({ action: "CLEAR_ALL" });
-                location.reload();
+        async function saveTripToCloud(tripData, reloadList = true) {
+            showLoading("Enviando para a planilha...");
+            try {
+                const formBody = [];
+                for (const property in tripData) {
+                    const encodedKey = encodeURIComponent(property);
+                    const encodedValue = encodeURIComponent(tripData[property]);
+                    formBody.push(encodedKey + "=" + encodedValue);
+                }
+                const formattedBody = formBody.join("&");
+
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                    },
+                    body: formattedBody
+                });
+                
+                if (reloadList) {
+                    setTimeout(async () => {
+                        await fetchTripsFromCloud();
+                    }, 1000);
+                } else {
+                    hideLoading();
+                }
+
+            } catch (error) {
+                console.error("Erro ao salvar:", error);
+                alert("Falha ao salvar. Tente de novo.");
+                hideLoading();
             }
         }
 
-        fetchTripsFromCloud();
+        document.getElementById('travelForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const pass = document.getElementById('passenger').value;
+            
+            // Pega a data selecionada no calendário e adiciona o horário atual exato do dispositivo
+            const inputDate = document.getElementById('date').value; 
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0]; // Ex: "14:30:15"
+            const fullDateTime = new Date(`${inputDate}T${timeStr}`);
+
+            const nt = getSelectedNotes();
+            const cIda = document.getElementById('cIda').checked;
+            const cVolta = document.getElementById('cVolta').checked;
+
+            if (!cIda && !cVolta) {
+                alert("Selecione pelo menos uma opção.");
+                return;
+            }
+
+            if (cIda) {
+                await saveTripToCloud({
+                    date: fullDateTime.toISOString(),
+                    passenger: pass,
+                    type: 'Ida',
+                    notes: nt
+                });
+            }
+
+            if (cVolta) {
+                setTimeout(async () => {
+                    await saveTripToCloud({
+                        date: fullDateTime.toISOString(),
+                        passenger: pass,
+                        type: 'Volta',
+                        notes: nt
+                    });
+                }, 1000);
+            }
+            
+            resetForm();
+        };
+
+        function resetForm() {
+            document.getElementById('notesSelect').value = "Carro do Berg";
+            document.getElementById('customNotes').value = "";
+            document.getElementById('customNotesGroup').style.display = "none";
+            document.getElementById('travelForm').reset();
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        }
+
+        async function clearAllData() {
+            if (trips.length === 0) {
+                alert("Não há dados cadastrados na nuvem para apagar.");
+                return;
+            }
+
+            const senhaDigitada = prompt("🔐 Operação Restrita!\nDigite a senha de administrador para limpar o relatório:");
+            if (senhaDigitada === null) return; 
+            if (senhaDigitada !== SENHA_ADMIN) {
+                alert("❌ Senha incorreta! Ação cancelada.");
+                return;
+            }
+
+            const confirmacaoFinal = confirm("⚠️ ATENÇÃO: Senha aceita.\nTem certeza absoluta que deseja APAGAR DEFINITIVAMENTE todas as viagens registradas na planilha?");
+            if (!confirmacaoFinal) return;
+
+            showLoading("Limpando histórico na nuvem...");
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: "action=CLEAR_ALL"
+                });
+
+                setTimeout(async () => {
+                    await fetchTripsFromCloud();
+                    alert("✅ Todo o histórico foi apagado com sucesso da nuvem.");
+                }, 1000);
+                
+            } catch (error) {
+                alert("Erro ao tentar limpar.");
+                hideLoading();
+            }
+        }
+
+        function render() {
+            const f = document.getElementById('filter').value;
+            const filtered = f === "Todos" ? trips : trips.filter(t => t.passenger === f);
+            
+            document.getElementById('resCount').innerText = filtered.length;
+            document.getElementById('resTotal').innerText = (filtered.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+
+            const list = document.getElementById('list');
+            list.innerHTML = filtered.length ? "" : "<p style='text-align:center; color:#999'>Nenhum registro encontrado.</p>";
+
+            [...filtered].reverse().forEach(t => {
+                list.innerHTML += `
+                    <div class="travel-card">
+                        <p><strong>${t.passenger}</strong> <span class="badge ${t.type==='Ida'?'badge-ida':'badge-volta'}">${t.type}</span></p>
+                        <p>📅 ${formatDateTime(t.date)} | 🚘 ${t.notes}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function downloadPDF() {
+            const f = document.getElementById('filter').value;
+            const filtered = f === "Todos" ? trips : trips.filter(t => t.passenger === f);
+
+            if (filtered.length === 0) {
+                alert("Sem dados para exportar.");
+                return;
+            }
+
+            const pdfContainer = document.createElement('div');
+            pdfContainer.className = "pdf-page-container";
+
+            const dataGeracao = new Date().toLocaleDateString('pt-BR');
+            const totalCusto = (filtered.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+
+            let pdfHTML = `
+                <div class="pdf-header">
+                    <h1 style="color:#1b5e20; margin:0; font-size:24px;">Relatório de Viagens - Xerém</h1>
+                    <p style="margin:5px 0; color:#555; font-size:14px;"><strong>Passageiro:</strong> ${f} | <strong>Gerado em:</strong> ${dataGeracao}</p>
+                </div>
+                <div style="background:#e8f5e9; border:1px solid #c8e6c9; padding:12px; border-radius:6px; margin-bottom:20px; display:flex; justify-content:space-between; font-size:16px;">
+                    <span><strong>Total de Viagens:</strong> ${filtered.length}</span>
+                    <span style="color:#1b5e20; font-weight:bold;">Valor Total: ${totalCusto}</span>
+                </div>
+                <div>
+            `;
+
+            [...filtered].reverse().forEach(t => {
+                pdfHTML += `
+                    <div class="pdf-card">
+                        <p style="margin: 0 0 5px 0; font-size:14px;">
+                            <strong>${t.passenger}</strong> 
+                            <span style="display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; color:#fff; font-weight:bold; background:${t.type==='Ida'?'#0288d1':'#f57c00'}">
+                                ${t.type}
+                            </span>
+                        </p>
+                        <p style="margin:0; font-size:13px; color:#555;">📅 ${formatDateTime(t.date)} | 🚘 Meio: ${t.notes}</p>
+                    </div>
+                `;
+            });
+
+            pdfHTML += `</div>`;
+            pdfContainer.innerHTML = pdfHTML;
+
+            const opt = {
+                margin: 15,
+                filename: `Viagens_Xerem_${f}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            html2pdf().set(opt).from(pdfContainer).save();
+        }
+
+        async function init() {
+            await checkQRParameters();
+            await fetchTripsFromCloud();
+        }
+
+        init();
     </script>
 </body>
 </html>
