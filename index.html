@@ -7,137 +7,41 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
-            --primary: #2e7d32;
-            --primary-light: #4caf50;
-            --dark: #1b5e20;
-            --bg: #f1f8e9;
-            --card: #ffffff;
-            --text: #333333;
-            --pdf-btn: #d32f2f;
+            --primary: #2e7d32; --primary-light: #4caf50; --dark: #1b5e20;
+            --bg: #f1f8e9; --card: #ffffff; --text: #333333; --pdf-btn: #d32f2f;
         }
 
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 600px; width: 100%; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; }
 
-        .container {
-            max-width: 600px;
-            width: 100%;
-            background: var(--card);
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            position: relative;
-        }
-
-        #userSelectionOverlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        .user-btn {
-            width: 80%;
-            max-width: 300px;
-            padding: 15px;
-            margin: 10px;
-            font-size: 18px;
-            background: white;
-            border: 2px solid var(--primary);
-            color: var(--primary);
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .user-btn:hover { background: var(--primary); color: white; }
-
-        #loadingOverlay {
-            display: none;
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.85);
-            border-radius: 12px;
-            z-index: 10;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--primary);
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 10px;
-        }
-
+        /* Overlay de Usuário */
+        #userSelectionOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .user-btn { width: 80%; max-width: 300px; padding: 15px; margin: 10px; font-size: 18px; background: white; border: 2px solid var(--primary); color: var(--primary); border-radius: 10px; cursor: pointer; font-weight: bold; }
+        
+        #loadingOverlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 10; justify-content: center; align-items: center; flex-direction: column; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        h1, h2 { text-align: center; color: var(--dark); }
-        h2 { font-size: 18px; border-bottom: 2px solid var(--bg); padding-bottom: 8px; color: var(--primary); margin-top: 25px; }
-
         .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-        label { font-weight: 600; margin-bottom: 5px; font-size: 14px; }
-
-        select, input, button { padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; outline: none; }
-        
-        .checkbox-group { display: flex; gap: 15px; margin-top: 5px; }
-        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #eee; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
-
+        select, input, button { padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; }
         button { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
         .btn-pdf { background-color: var(--pdf-btn); width: 100%; margin-top: 10px; }
 
-        .summary-box {
-            background: #e8f5e9;
-            border: 1px solid #c8e6c9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .summary-box { background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .travel-card { background: white; padding: 12px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #ddd; border-left: 5px solid var(--primary-light); }
 
-        .summary-value { font-size: 20px; font-weight: bold; color: var(--dark); }
-
-        .travel-card {
-            background: white;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-left: 5px solid var(--primary-light);
-        }
-
-        #customNotesGroup { display: none; margin-top: 10px; }
-
-        /* Estilos PDF - Otimizados para não cortar */
-        .pdf-page-container { font-family: Arial, sans-serif; padding: 20px; width: 750px; background: white; color: #333; }
-        .pdf-header { text-align: center; border-bottom: 2px solid #2e7d32; padding-bottom: 10px; margin-bottom: 15px; }
-        .pdf-card { border: 1px solid #ccc; border-left: 5px solid #4caf50; padding: 12px; margin-bottom: 8px; page-break-inside: avoid; border-radius: 4px; }
+        /* ESTILOS EXCLUSIVOS DO PDF */
+        .pdf-area { padding: 40px; background: white; color: black; font-size: 12pt; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .pdf-table th, .pdf-table td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        .pdf-table th { background-color: #f2f2f2; }
+        .pdf-item { page-break-inside: avoid; } /* Impede corte de linha no meio */
     </style>
 </head>
 <body>
 
     <div id="userSelectionOverlay">
-        <h1 style="color: var(--dark)">Bem-vindo(a)</h1>
-        <p>Selecione seu nome para acessar:</p>
+        <h1 style="color: var(--dark)">Quem é você?</h1>
         <button class="user-btn" onclick="setUser('Gabriel')">Gabriel</button>
         <button class="user-btn" onclick="setUser('Rafael')">Rafael</button>
         <button class="user-btn" onclick="setUser('Juliana')">Juliana</button>
@@ -146,53 +50,34 @@
     <div class="container">
         <div id="loadingOverlay">
             <div class="spinner"></div>
-            <span id="loadingText">Sincronizando...</span>
+            <p id="loadingText">Aguarde...</p>
         </div>
 
-        <h1 id="userTitle">📍 Minhas Viagens</h1>
+        <h1 id="userTitle">Minhas Viagens</h1>
         
         <form id="travelForm">
-            <div class="form-group">
-                <label>Data:</label>
-                <input type="date" id="date">
+            <div class="form-group"><label>Data:</label><input type="date" id="date"></div>
+            <div class="form-group" style="flex-direction:row; gap:20px;">
+                <label><input type="checkbox" id="cIda" checked> Ida</label>
+                <label><input type="checkbox" id="cVolta"> Volta</label>
             </div>
-
             <div class="form-group">
-                <label>Tipo:</label>
-                <div class="checkbox-group">
-                    <label class="checkbox-label"><input type="checkbox" id="cIda" checked> Ida</label>
-                    <label class="checkbox-label"><input type="checkbox" id="cVolta"> Volta</label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Meio de Transporte:</label>
-                <select id="notesSelect" onchange="toggleCustomNotes()">
+                <select id="notesSelect">
                     <option value="Carro do Berg">Carro do Berg</option>
                     <option value="Uber">Uber</option>
-                    <option value="Outro">Outro...</option>
                 </select>
-                <div id="customNotesGroup">
-                    <input type="text" id="customNotes" placeholder="Especifique...">
-                </div>
             </div>
-
-            <button type="submit" style="width: 100%">Salvar Registro</button>
+            <button type="submit" style="width: 100%">Salvar Viagem</button>
         </form>
 
-        <br><hr><br>
+        <hr style="margin:20px 0">
 
-        <h2>Meu Resumo Financeiro</h2>
-        
         <div class="summary-box">
-            <div>
-                <p>Total de Viagens: <span id="resCount">0</span></p>
-                <small>Valor: R$ 12,50 por trecho</small>
-            </div>
-            <div class="summary-value" id="resTotal">R$ 0,00</div>
+            <div>Total: <span id="resCount">0</span> trechos</div>
+            <div id="resTotal" style="font-size:20px; font-weight:bold">R$ 0,00</div>
         </div>
 
-        <button class="btn-pdf" onclick="downloadPDF()">📄 Gerar Meu Relatório (PDF)</button>
+        <button class="btn-pdf" onclick="downloadPDF()">📄 Baixar Relatório PDF</button>
 
         <div id="list" style="margin-top: 20px;"></div>
     </div>
@@ -200,133 +85,105 @@
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbz2-8xldXs-VKsMiCIqwZyKR9K3Kl26VOCMHOiD47O9uQugqQZ1UK1zRBffD1vXnKMF/exec";
         const PRECO = 12.50;
-        let currentUser = localStorage.getItem('viagens_user_fixed') || null;
+        let currentUser = localStorage.getItem('viagens_user_fixed');
         let trips = [];
 
         if (currentUser) {
             document.getElementById('userSelectionOverlay').style.display = 'none';
-            document.getElementById('userTitle').innerText = `📍 Painel de ${currentUser}`;
-            fetchTripsFromCloud();
+            document.getElementById('userTitle').innerText = `Olá, ${currentUser}`;
+            fetchTrips();
         }
 
         function setUser(name) {
             currentUser = name;
             localStorage.setItem('viagens_user_fixed', name);
-            document.getElementById('userSelectionOverlay').style.display = 'none';
-            document.getElementById('userTitle').innerText = `📍 Painel de ${currentUser}`;
-            fetchTripsFromCloud();
+            location.reload();
         }
 
-        function showLoading(text) {
-            document.getElementById('loadingText').innerText = text;
+        async function fetchTrips() {
             document.getElementById('loadingOverlay').style.display = 'flex';
-        }
-
-        function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
-
-        function toggleCustomNotes() {
-            const selectValue = document.getElementById('notesSelect').value;
-            document.getElementById('customNotesGroup').style.display = (selectValue === 'Outro') ? 'block' : 'none';
-        }
-
-        function formatDateTime(rawDateStr) {
-            if (!rawDateStr) return "--";
-            const dataObj = new Date(rawDateStr);
-            if (isNaN(dataObj.getTime())) return rawDateStr;
-            const d = dataObj.toLocaleDateString('pt-BR');
-            const h = dataObj.toLocaleTimeString('pt-BR');
-            return h === "00:00:00" ? d : `${d} às ${h}`;
-        }
-
-        async function fetchTripsFromCloud() {
-            showLoading("Buscando dados...");
             try {
                 const response = await fetch(API_URL);
-                const rawData = await response.json();
-                trips = rawData
-                    .map(row => ({ date: row[0], passenger: row[1], type: row[2], notes: row[3] }))
-                    .filter(t => t.passenger === currentUser);
+                const data = await response.json();
+                trips = data.map(r => ({ date: r[0], passenger: r[1], type: r[2], notes: r[3] }))
+                            .filter(t => t.passenger === currentUser);
                 render();
-            } catch (error) { console.error(error); } finally { hideLoading(); }
-        }
-
-        async function saveTripToCloud(tripData) {
-            showLoading("Salvando...");
-            const formBody = [];
-            for (const key in tripData) formBody.push(encodeURIComponent(key) + "=" + encodeURIComponent(tripData[key]));
-            await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formBody.join("&") });
-            await fetchTripsFromCloud();
+            } catch (e) { alert("Erro ao carregar dados."); }
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
 
         document.getElementById('travelForm').onsubmit = async (e) => {
             e.preventDefault();
-            const dateVal = document.getElementById('date').value || new Date().toISOString().split('T')[0];
-            const now = new Date();
-            const fullDateTime = new Date(`${dateVal}T${now.toTimeString().split(' ')[0]}`);
-            const notes = document.getElementById('notesSelect').value === 'Outro' ? document.getElementById('customNotes').value : document.getElementById('notesSelect').value;
-            if (document.getElementById('cIda').checked) await saveTripToCloud({ date: fullDateTime.toISOString(), passenger: currentUser, type: 'Ida', notes: notes });
-            if (document.getElementById('cVolta').checked) await saveTripToCloud({ date: fullDateTime.toISOString(), passenger: currentUser, type: 'Volta', notes: notes });
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            const date = document.getElementById('date').value;
+            const notes = document.getElementById('notesSelect').value;
+            
+            if (document.getElementById('cIda').checked) await sendData(date, 'Ida', notes);
+            if (document.getElementById('cVolta').checked) await sendData(date, 'Volta', notes);
+            
+            fetchTrips();
         };
+
+        async function sendData(d, t, n) {
+            const body = `date=${encodeURIComponent(d)}&passenger=${encodeURIComponent(currentUser)}&type=${encodeURIComponent(t)}&notes=${encodeURIComponent(n)}`;
+            await fetch(API_URL, { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body });
+        }
 
         function render() {
             document.getElementById('resCount').innerText = trips.length;
             document.getElementById('resTotal').innerText = (trips.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
             const list = document.getElementById('list');
-            list.innerHTML = trips.length ? "" : "<p style='text-align:center; color:#999'>Nenhum registro encontrado.</p>";
-            [...trips].reverse().forEach(t => {
-                list.innerHTML += `<div class="travel-card"><p style="margin:0"><strong>${t.type}</strong></p><p style="margin:5px 0 0 0; font-size:14px; color:#555">📅 ${formatDateTime(t.date)} | 🚘 ${t.notes}</p></div>`;
-            });
+            list.innerHTML = trips.reverse().map(t => `
+                <div class="travel-card">
+                    <strong>${t.type}</strong> - ${new Date(t.date).toLocaleDateString('pt-BR')}<br>
+                    <small>${t.notes}</small>
+                </div>
+            `).join('');
         }
 
         function downloadPDF() {
-            if (trips.length === 0) { alert("Não há registros para gerar o PDF."); return; }
-            showLoading("Preparando PDF completo...");
+            if (trips.length === 0) return alert("Sem dados.");
+            document.getElementById('loadingOverlay').style.display = 'flex';
 
-            const pdfContainer = document.createElement('div');
-            pdfContainer.className = "pdf-page-container";
+            const worker = document.createElement('div');
+            worker.className = "pdf-area";
             
-            const totalF = (trips.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+            let tableRows = trips.map(t => `
+                <tr class="pdf-item">
+                    <td>${new Date(t.date).toLocaleDateString('pt-BR')}</td>
+                    <td>${t.type}</td>
+                    <td>${t.notes}</td>
+                    <td>R$ 12,50</td>
+                </tr>
+            `).join('');
 
-            let html = `
-                <div class="pdf-header">
-                    <h2 style="margin:0; color:#1b5e20">Relatório Financeiro de Viagens</h2>
-                    <p style="margin:5px 0">Passageiro(a): <strong>${currentUser}</strong> | Gerado em: ${new Date().toLocaleDateString('pt-BR')}</p>
-                </div>
-                <div style="background:#f1f8e9; padding:12px; margin-bottom:20px; border-radius:5px; border: 1px solid #c8e6c9">
-                    <span><strong>Resumo Final:</strong> ${trips.length} trechos registrados | <strong>Valor Total: ${totalF}</strong></span>
-                </div>`;
-            
-            // Aqui garantimos que pegamos a lista completa do array 'trips'
-            [...trips].reverse().forEach(t => {
-                html += `
-                    <div class="pdf-card">
-                        <p style="margin:0; font-size:15px;"><strong>${t.type}</strong> - ${formatDateTime(t.date)}</p>
-                        <p style="margin:4px 0 0 0; font-size:13px; color:#444">Transporte: ${t.notes}</p>
-                    </div>`;
-            });
+            worker.innerHTML = `
+                <h1 style="color:#1b5e20">Relatório de Viagens</h1>
+                <p>Passageiro: <strong>${currentUser}</strong></p>
+                <p>Total de trechos: ${trips.length} | <strong>Total Geral: ${(trips.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</strong></p>
+                <table class="pdf-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Transporte</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+            `;
 
-            pdfContainer.innerHTML = html;
-
-            // Opções para evitar cortes
             const opt = {
-                margin: 10,
-                filename: `Viagens_${currentUser}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
-                    useCORS: true, 
-                    logging: false,
-                    width: 750 // Força a largura para garantir que nada saia da borda
-                },
+                margin: [15, 15],
+                filename: `Relatorio_${currentUser}.pdf`,
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            // Pequeno delay de 500ms para o navegador processar o container do PDF antes da captura
-            setTimeout(() => {
-                html2pdf().set(opt).from(pdfContainer).save().then(() => {
-                    hideLoading();
-                });
-            }, 500);
+            html2pdf().set(opt).from(worker).save().then(() => {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            });
         }
 
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
