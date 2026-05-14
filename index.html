@@ -37,7 +37,7 @@
             position: relative;
         }
 
-        /* Tela de Seleção de Usuário */
+        /* Tela de Seleção de Usuário (Só aparece na 1ª vez) */
         #userSelectionOverlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -132,17 +132,18 @@
 
         #customNotesGroup { display: none; margin-top: 10px; }
 
-        /* PDF Layout */
-        .pdf-page-container { font-family: Arial, sans-serif; padding: 20px; width: 750px; background: white; }
-        .pdf-card { border: 1px solid #ddd; border-left: 5px solid #4caf50; padding: 12px; margin-bottom: 10px; page-break-inside: avoid; }
+        /* Estilos PDF */
+        .pdf-page-container { font-family: Arial, sans-serif; padding: 20px; width: 700px; background: white; color: #333; }
+        .pdf-header { text-align: center; border-bottom: 2px solid #2e7d32; padding-bottom: 10px; margin-bottom: 15px; }
+        .pdf-card { border: 1px solid #ddd; border-left: 5px solid #4caf50; padding: 10px; margin-bottom: 8px; page-break-inside: avoid; border-radius: 4px; }
     </style>
 </head>
 <body>
 
-    <!-- Tela Inicial de Identificação -->
+    <!-- Seleção de Passageiro Única -->
     <div id="userSelectionOverlay">
-        <h1 style="color: var(--dark)">Quem está acessando?</h1>
-        <p>Selecione seu nome para ver seu relatório</p>
+        <h1 style="color: var(--dark)">Bem-vindo(a)</h1>
+        <p>Selecione seu nome para acessar seu painel pessoal:</p>
         <button class="user-btn" onclick="setUser('Gabriel')">Gabriel</button>
         <button class="user-btn" onclick="setUser('Rafael')">Rafael</button>
         <button class="user-btn" onclick="setUser('Juliana')">Juliana</button>
@@ -158,7 +159,7 @@
         
         <form id="travelForm">
             <div class="form-group">
-                <label>Data da Viagem:</label>
+                <label>Data:</label>
                 <input type="date" id="date">
             </div>
 
@@ -178,55 +179,49 @@
                     <option value="Outro">Outro...</option>
                 </select>
                 <div id="customNotesGroup">
-                    <input type="text" id="customNotes" placeholder="Descreva aqui...">
+                    <input type="text" id="customNotes" placeholder="Especifique o transporte...">
                 </div>
             </div>
 
-            <button type="submit" style="width: 100%">Registrar Agora</button>
+            <button type="submit" style="width: 100%">Salvar Registro</button>
         </form>
 
         <br><hr><br>
 
-        <h2>Meu Relatório Financeiro</h2>
+        <h2>Meu Resumo Financeiro</h2>
         
         <div class="summary-box">
             <div>
                 <p>Total de Viagens: <span id="resCount">0</span></p>
-                <small>R$ 12,50 por trecho</small>
+                <small>Valor unitário: R$ 12,50</small>
             </div>
             <div class="summary-value" id="resTotal">R$ 0,00</div>
         </div>
 
-        <button class="btn-pdf" onclick="downloadPDF()">📄 Baixar Meu PDF</button>
-        <p style="text-align: center;"><a href="javascript:void(0)" onclick="logout()" style="color: #666; font-size: 12px;">Trocar de usuário</a></p>
+        <button class="btn-pdf" onclick="downloadPDF()">📄 Gerar Meu Relatório (PDF)</button>
 
-        <div id="list"></div>
+        <div id="list" style="margin-top: 20px;"></div>
     </div>
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbz2-8xldXs-VKsMiCIqwZyKR9K3Kl26VOCMHOiD47O9uQugqQZ1UK1zRBffD1vXnKMF/exec";
         const PRECO = 12.50;
-        let currentUser = localStorage.getItem('viagens_user') || null;
+        let currentUser = localStorage.getItem('viagens_user_fixed') || null;
         let trips = [];
 
-        // Inicialização
+        // Verifica se já existe um usuário logado no dispositivo
         if (currentUser) {
             document.getElementById('userSelectionOverlay').style.display = 'none';
-            document.getElementById('userTitle').innerText = `📍 Viagens de ${currentUser}`;
+            document.getElementById('userTitle').innerText = `📍 Painel de ${currentUser}`;
             fetchTripsFromCloud();
         }
 
         function setUser(name) {
             currentUser = name;
-            localStorage.setItem('viagens_user', name);
+            localStorage.setItem('viagens_user_fixed', name); // Salva permanentemente no dispositivo
             document.getElementById('userSelectionOverlay').style.display = 'none';
-            document.getElementById('userTitle').innerText = `📍 Viagens de ${currentUser}`;
+            document.getElementById('userTitle').innerText = `📍 Painel de ${currentUser}`;
             fetchTripsFromCloud();
-        }
-
-        function logout() {
-            localStorage.removeItem('viagens_user');
-            location.reload();
         }
 
         function showLoading(text) {
@@ -251,25 +246,31 @@
         }
 
         async function fetchTripsFromCloud() {
-            showLoading("Carregando seus dados...");
+            showLoading("Buscando seus dados...");
             try {
                 const response = await fetch(API_URL);
                 const rawData = await response.json();
-                // AQUI ESTÁ A MÁGICA: Filtra os dados da planilha pelo usuário logado
+                // Filtra APENAS os dados do usuário atual
                 trips = rawData
                     .map(row => ({ date: row[0], passenger: row[1], type: row[2], notes: row[3] }))
                     .filter(t => t.passenger === currentUser);
                 render();
-            } catch (error) { console.error(error); } finally { hideLoading(); }
+            } catch (error) { console.error("Erro ao carregar:", error); } finally { hideLoading(); }
         }
 
         async function saveTripToCloud(tripData) {
-            showLoading("Salvando...");
+            showLoading("Salvando na nuvem...");
             const formBody = [];
             for (const key in tripData) formBody.push(encodeURIComponent(key) + "=" + encodeURIComponent(tripData[key]));
             
-            await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formBody.join("&") });
-            await fetchTripsFromCloud();
+            try {
+                await fetch(API_URL, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+                    body: formBody.join("&") 
+                });
+                await fetchTripsFromCloud();
+            } catch (e) { alert("Erro ao salvar. Verifique a conexão."); hideLoading(); }
         }
 
         document.getElementById('travelForm').onsubmit = async (e) => {
@@ -279,34 +280,64 @@
             const fullDateTime = new Date(`${dateVal}T${now.toTimeString().split(' ')[0]}`);
             const notes = document.getElementById('notesSelect').value === 'Outro' ? document.getElementById('customNotes').value : document.getElementById('notesSelect').value;
             
-            if (document.getElementById('cIda').checked) {
-                await saveTripToCloud({ date: fullDateTime.toISOString(), passenger: currentUser, type: 'Ida', notes: notes });
+            const ida = document.getElementById('cIda').checked;
+            const volta = document.getElementById('cVolta').checked;
+
+            if (!ida && !volta) { alert("Selecione Ida ou Volta."); return; }
+
+            if (ida) await saveTripToCloud({ date: fullDateTime.toISOString(), passenger: currentUser, type: 'Ida', notes: notes });
+            if (volta) {
+                // Pequeno delay para não sobrepor requisições se selecionar os dois
+                setTimeout(async () => {
+                    await saveTripToCloud({ date: fullDateTime.toISOString(), passenger: currentUser, type: 'Volta', notes: notes });
+                }, 800);
             }
-            if (document.getElementById('cVolta').checked) {
-                await saveTripToCloud({ date: fullDateTime.toISOString(), passenger: currentUser, type: 'Volta', notes: notes });
-            }
-            alert("Registrado!");
         };
 
         function render() {
             document.getElementById('resCount').innerText = trips.length;
             document.getElementById('resTotal').innerText = (trips.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
             const list = document.getElementById('list');
-            list.innerHTML = trips.length ? "" : "<p style='text-align:center; color:#999'>Nenhuma viagem sua encontrada.</p>";
+            list.innerHTML = trips.length ? "" : "<p style='text-align:center; color:#999'>Nenhum registro encontrado para você.</p>";
             [...trips].reverse().forEach(t => {
-                list.innerHTML += `<div class="travel-card"><p><strong>${t.type}</strong></p><p>📅 ${formatDateTime(t.date)} | 🚘 ${t.notes}</p></div>`;
+                list.innerHTML += `
+                    <div class="travel-card">
+                        <p style="margin:0"><strong>${t.type}</strong></p>
+                        <p style="margin:5px 0 0 0; font-size:14px; color:#555">📅 ${formatDateTime(t.date)} | 🚘 ${t.notes}</p>
+                    </div>`;
             });
         }
 
         function downloadPDF() {
             const pdfContainer = document.createElement('div');
             pdfContainer.className = "pdf-page-container";
-            let html = `<h2>Relatório de Viagens - ${currentUser}</h2><p>Gerado em: ${new Date().toLocaleDateString('pt-BR')}</p><hr>`;
-            trips.forEach(t => {
-                html += `<div class="pdf-card"><strong>${t.type}</strong><br>Data: ${formatDateTime(t.date)} | Transporte: ${t.notes}</div>`;
+            const dataG = new Date().toLocaleDateString('pt-BR');
+            const totalF = (trips.length * PRECO).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+
+            let html = `
+                <div class="pdf-header">
+                    <h2 style="margin:0; color:#1b5e20">Relatório Financeiro de Viagens</h2>
+                    <p style="margin:5px 0">Passageiro(a): <strong>${currentUser}</strong></p>
+                </div>
+                <div style="background:#f1f8e9; padding:10px; margin-bottom:20px; border-radius:5px">
+                    <span><strong>Resumo:</strong> ${trips.length} viagens | <strong>Valor Total:</strong> ${totalF}</span>
+                </div>`;
+            
+            [...trips].reverse().forEach(t => {
+                html += `
+                    <div class="pdf-card">
+                        <p style="margin:0"><strong>${t.type}</strong> - ${formatDateTime(t.date)}</p>
+                        <p style="margin:3px 0 0 0; font-size:12px; color:#666">Transporte: ${t.notes}</p>
+                    </div>`;
             });
+
             pdfContainer.innerHTML = html;
-            html2pdf().set({ margin: 10, filename: `Viagens_${currentUser}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' } }).from(pdfContainer).save();
+            html2pdf().set({ 
+                margin: 15, 
+                filename: `Viagens_${currentUser}.pdf`, 
+                html2canvas: { scale: 2 }, 
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+            }).from(pdfContainer).save();
         }
 
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
